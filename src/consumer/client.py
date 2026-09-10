@@ -5,8 +5,8 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
-from config import get_settings
-from storage import TelemetryRepository
+from .config import get_settings
+from .storage import TelemetryRepository
 
 logger = logging.getLogger(__name__)
 

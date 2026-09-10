@@ -116,7 +116,7 @@ if [[ -t 0 ]]; then
 fi
 
 log "Starting the Kubernetes stack"
-startup_args=(startup.py --no-follow)
+startup_args=(scripts/startup.py --no-follow)
 if [[ "$SIMULATE" == true ]]; then
     log "Simulation enabled: using helm/ai-flow/values.simulate.yaml"
     startup_args+=(--values helm/ai-flow/values.simulate.yaml)

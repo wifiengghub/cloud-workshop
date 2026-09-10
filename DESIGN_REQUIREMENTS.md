@@ -19,18 +19,18 @@ Grafana dashboard, and publish actionable anomaly context over MQTT.
 | FR-07 | Publish alerts | Anomaly, status, and summary payloads are published to the configured MQTT topics. |
 | FR-08 | Provision Grafana | Grafana starts with the TimescaleDB datasource and dashboard JSON imported automatically. |
 | FR-09 | Expose local access | Linux startup forwards Grafana to `localhost:3000` and TimescaleDB to `localhost:5433`. |
-| FR-10 | Clean up | `shutdown.py` stops port-forwards and removes the Helm release, namespace, kind cluster, image, and venv by default. |
+| FR-10 | Clean up | `scripts/shutdown.py` stops port-forwards and removes the Helm release, namespace, kind cluster, image, and venv by default. |
 
 ## 3. Non-functional requirements
 
 | ID | Requirement | Acceptance criteria |
 | --- | --- | --- |
-| NFR-01 | Reproducible startup | `./start_linux.sh` creates the venv, installs requirements, builds the image, deploys Helm, and starts forwarding. |
+| NFR-01 | Reproducible startup | `./scripts/start_linux.sh` creates the venv, installs requirements, builds the image, deploys Helm, and starts forwarding. |
 | NFR-02 | Kubernetes-only application runtime | Consumer, database, Grafana, training init, and inference run as Kubernetes workloads. |
 | NFR-03 | Resilient database startup | Database readiness probes, wait init containers, and inference connection retries handle PostgreSQL startup delays. |
 | NFR-04 | Observable operation | Pod status, consumer logs, training logs, inference logs, and port-forward logs are available through documented commands. |
 | NFR-05 | Credential hygiene | Real credentials are supplied through environment or private Helm values and are not committed. |
-| NFR-06 | Single source of truth | The root Dockerfile, requirements file, Helm chart, training dataset, and startup/shutdown scripts define the supported flow. |
+| NFR-06 | Single source of truth | Root Docker build files, `src/`, `config/`, `scripts/`, Helm chart, training dataset, and lifecycle scripts define the supported flow. |
 
 ## 4. Operational interfaces
 
@@ -75,8 +75,8 @@ wifi/alerts/summary
 
 ## 6. Validation checklist
 
-- `bash -n start_linux.sh` passes.
-- `python3 -m py_compile startup.py shutdown.py` passes.
+- `bash -n scripts/start_linux.sh` passes.
+- `python3 -m py_compile scripts/startup.py scripts/shutdown.py` passes.
 - `helm lint helm/ai-flow` passes.
 - `helm template ai-flow helm/ai-flow` renders successfully.
 - All expected pods reach `Running` and `1/1 Ready`.
@@ -84,4 +84,4 @@ wifi/alerts/summary
 - Training logs show `model.pkl` saved.
 - Inference logs show database and MQTT connections.
 - Grafana loads the dashboard and displays telemetry after selecting a recent time range.
-- `python3 shutdown.py` removes runtime resources after validation.
+- `python3 scripts/shutdown.py` removes runtime resources after validation.

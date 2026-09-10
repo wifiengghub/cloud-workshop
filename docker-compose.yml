@@ -18,7 +18,7 @@ services:
 
   consumer:
     build: .
-    command: ["python", "consumer.py"]
+    command: ["python", "-m", "consumer.consumer"]
     environment:
       MQTT_BROKER_HOST: ${MQTT_BROKER_HOST:-0.tcp.in.ngrok.io}
       MQTT_BROKER_PORT: ${MQTT_BROKER_PORT:-24839}
@@ -42,14 +42,14 @@ services:
 
   trainer:
     build: .
-    command: ["python", "train.py", "--data", "data/train_1000.json", "--out", "model_artifacts/model.pkl"]
+    command: ["python", "-m", "ai.train", "--data", "data/train_1000.json", "--out", "model_artifacts/model.pkl"]
     volumes:
       - ./data:/app/data:ro
       - ./model_artifacts:/app/model_artifacts
 
   inference:
     build: .
-    command: ["python", "inference.py"]
+    command: ["python", "-m", "ai.inference"]
     environment:
       MODEL_PATH: model_artifacts/model.pkl
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-30}

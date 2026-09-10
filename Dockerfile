@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY *.py ./
+COPY src ./src
 COPY data ./data
 RUN mkdir -p /app/model_artifacts /app/logs \
     && addgroup --system app \
@@ -17,6 +17,7 @@ RUN mkdir -p /app/model_artifacts /app/logs \
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
     MODEL_PATH=model_artifacts/model.pkl \
     POLL_INTERVAL_SECONDS=30 \
     ALERT_THRESHOLD=0.5 \
@@ -25,4 +26,4 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 USER app
 
-CMD ["python", "consumer.py"]
+CMD ["python", "-m", "consumer.consumer"]

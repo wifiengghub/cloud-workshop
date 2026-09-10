@@ -55,7 +55,7 @@ spec:
         - name: consumer
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "consumer.py"]
+          command: ["python", "-m", "consumer.consumer"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           env:
@@ -118,7 +118,7 @@ spec:
         - name: simulator
           image: "{{ .Values.simulator.image }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "simulator.py"]
+          command: ["python", "-m", "ai.simulator"]
           env:
             - name: SIMULATOR_MQTT_HOST
               value: {{ include "ai-flow.fullname" . }}-mqtt-broker
@@ -189,7 +189,7 @@ spec:
         - name: train-model
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "train.py", "--data", {{ .Values.training.dataPath | quote }}, "--out", {{ .Values.training.modelPath | quote }}]
+          command: ["python", "-m", "ai.train", "--data", {{ .Values.training.dataPath | quote }}, "--out", {{ .Values.training.modelPath | quote }}]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           volumeMounts:
@@ -200,7 +200,7 @@ spec:
         - name: inference
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "inference.py"]
+          command: ["python", "-m", "ai.inference"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           env:

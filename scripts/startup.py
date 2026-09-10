@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 VENV = ROOT / ".venv"
 LOCAL_BIN = Path.home() / ".local" / "bin"
 KIND_CLUSTER = "devicedatahub"
@@ -101,6 +101,9 @@ def cluster_container_running(docker: str) -> bool:
         check=False,
     )
     return result.returncode == 0 and result.stdout.strip() == "true"
+    ROOT = Path(__file__).resolve().parent.parent
+    VENV = ROOT / ".venv"
+    LOCAL_BIN = Path.home() / ".local" / "bin"
 
 
 def ensure_cluster(kind: str, docker: str) -> None:

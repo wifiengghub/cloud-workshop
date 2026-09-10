@@ -3,7 +3,7 @@ import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from data import ML_FEATURE_COLUMNS
+from .data import ML_FEATURE_COLUMNS
 
 
 def get_conn(retries: int = 1, retry_delay: int = 5):

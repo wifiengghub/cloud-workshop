@@ -4,7 +4,7 @@ The simulation profile is opt-in. It starts Mosquitto inside Kubernetes and a
 `simulator.py` pod that publishes randomized normal and anomalous Wi-Fi payloads
 to the same topic consumed by `consumer.py`.
 
-Use `./start_linux.sh` and answer `Yes` when asked to enable local simulation.
+Use `./scripts/start_linux.sh` from the repository root and answer `Yes` when asked to enable local simulation.
 Answering `No` preserves the normal ngrok MQTT flow.
 
 Simulation resources:
@@ -38,5 +38,5 @@ simulator:
   anomalyRate: 0.35
 ```
 
-Run `python3 shutdown.py` to remove the broker, simulator, pods, Helm release,
+Run `python3 scripts/shutdown.py` to remove the broker, simulator, pods, Helm release,
 namespace, kind cluster, image, and local runtime processes.

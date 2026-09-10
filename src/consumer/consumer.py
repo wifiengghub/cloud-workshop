@@ -2,7 +2,7 @@ import logging
 import signal
 import sys
 
-from client import MqttTelemetryConsumer
+from .client import MqttTelemetryConsumer
 
 logger = logging.getLogger(__name__)
 

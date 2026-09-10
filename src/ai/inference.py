@@ -8,10 +8,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from model_io import load_model
-from mqtt_publisher import MQTTAlertPublisher
-from db import get_conn, fetch_window_features
-from data import ML_FEATURE_COLUMNS
+from .model_io import load_model
+from .mqtt_publisher import MQTTAlertPublisher
+from .db import get_conn, fetch_window_features
+from .data import ML_FEATURE_COLUMNS
 
 THRESHOLD = float(os.getenv("ALERT_THRESHOLD", "0.5"))
 MODEL_PATH = os.getenv("MODEL_PATH", "model_artifacts/model.pkl")

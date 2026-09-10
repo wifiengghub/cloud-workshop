@@ -13,8 +13,8 @@ MQTT over ngrok -> consumer -> TimescaleDB -> Grafana
 ## Start On Linux
 
 ```bash
-chmod +x start_linux.sh
-./start_linux.sh
+chmod +x scripts/start_linux.sh
+./scripts/start_linux.sh
 ```
 
 The launcher uses `$HOME/workspaces` as the WSL workspace root, creates it when
@@ -32,26 +32,25 @@ needed:
 ```bash
 WORKSPACE_DIR="$HOME/workspaces" \
 REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
-./start_linux.sh
+./scripts/start_linux.sh
 ```
 
-`start_linux.sh` performs the complete startup sequence:
+`scripts/start_linux.sh` performs the complete startup sequence:
 
-
-2. Installs and starts Docker Engine when it is missing or stopped.
-3. Creates `.venv` if it does not exist.
-4. Activates the virtual environment.
-5. Installs `requirements.txt`.
-6. Asks whether to enable the local MQTT simulator.
-7. Runs `startup.py --no-follow` with `values.simulate.yaml` only when enabled.
-8. Creates or reuses the `devicedatahub` kind cluster.
-9. Builds `devicedatahub-ai-flow:latest`.
-10. Loads the image into the kind nodes.
-11. Installs or upgrades the `helm/ai-flow` chart.
-12. Starts TimescaleDB, Grafana, the MQTT consumer, and inference pods.
-13. Trains the model from `data/train_1000.json` in the inference pod init container.
-14. Starts `inference.py` only after training and database readiness succeed.
-15. Starts Grafana and TimescaleDB port-forward processes.
+1. Installs and starts Docker Engine when it is missing or stopped.
+2. Creates `.venv` if it does not exist.
+3. Activates the virtual environment.
+4. Installs `requirements.txt`.
+5. Asks whether to enable the local MQTT simulator.
+6. Runs `scripts/startup.py --no-follow` with `values.simulate.yaml` only when enabled.
+7. Creates or reuses the `devicedatahub` kind cluster.
+8. Builds `devicedatahub-ai-flow:latest`.
+9. Loads the image into the kind nodes.
+10. Installs or upgrades the `helm/ai-flow` chart.
+11. Starts TimescaleDB, Grafana, the MQTT consumer, and inference pods.
+12. Trains the model from `data/train_1000.json` in the inference pod init container.
+13. Starts `inference.py` only after training and database readiness succeed.
+14. Starts Grafana and TimescaleDB port-forward processes.
 
 GitHub CLI is not required for this public HTTPS repository. `git clone` works
 without `gh auth login`. GitHub CLI authentication is only needed if you change
@@ -152,12 +151,27 @@ wifi/alerts/summary
 Messages include the reason code, training-aligned scenario, layman
 explanation, recommended action, metrics, and publish result.
 
+## Container Files At Repository Root
+
+The Docker files intentionally remain at the repository root, which is the
+standard Docker build context:
+
+```text
+Dockerfile          image definition
+.dockerignore       image build exclusions
+docker-compose.yml  optional local Compose orchestration
+requirements.txt    image dependency manifest
+```
+
+Application source is separated under `src/`, operational configuration under
+`config/`, and lifecycle scripts under `scripts/`.
+
 ## Configuration
 
 Copy the example environment file for reference:
 
 ```bash
-cp .env.example .env
+cp config/.env.example .env
 ```
 
 For Kubernetes, use a private Helm values file for broker and credential
@@ -206,7 +220,7 @@ helm upgrade --install ai-flow helm/ai-flow \
 After validation is complete, run the cleanup command:
 
 ```bash
-python3 shutdown.py
+python3 scripts/shutdown.py
 ```
 
 This stops the port-forward processes, uninstalls the Helm release, deletes the
@@ -216,16 +230,21 @@ project virtual environment.
 Preserve selected local resources when needed:
 
 ```bash
-python3 shutdown.py --keep-cluster
-python3 shutdown.py --keep-image
-python3 shutdown.py --keep-venv
+python3 scripts/shutdown.py --keep-cluster
+python3 scripts/shutdown.py --keep-image
+python3 scripts/shutdown.py --keep-venv
 ```
 
 ## Project Files
 
-- [start_linux.sh](start_linux.sh): Linux/WSL startup and port forwarding
-- [startup.py](startup.py): kind, kubectl, Helm, image, and deployment bootstrap
-- [shutdown.py](shutdown.py): process, Kubernetes, and local cleanup
+- [src/consumer](src/consumer): MQTT consumer, configuration, storage, and client
+- [src/ai](src/ai): training, inference, database access, model I/O, publisher, and simulator
+- [config](config): environment and simulator broker configuration
+- [data/train_1000.json](data/train_1000.json): canonical training dataset
+- [model_artifacts](model_artifacts): trained model storage
+- [scripts/start_linux.sh](scripts/start_linux.sh): Linux/WSL startup and port forwarding
+- [scripts/startup.py](scripts/startup.py): kind, kubectl, Helm, image, and deployment bootstrap
+- [scripts/shutdown.py](scripts/shutdown.py): process, Kubernetes, and local cleanup
 - [helm/ai-flow](helm/ai-flow): complete Kubernetes chart
 - [ARCHITECTURE.md](ARCHITECTURE.md): component and data-flow diagram
 - [DESIGN_REQUIREMENTS.md](DESIGN_REQUIREMENTS.md): application requirements and acceptance criteria

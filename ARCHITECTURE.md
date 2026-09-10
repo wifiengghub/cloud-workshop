@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart LR
-    M["MQTT over ngrok<br/>weh-device/network"] --> C["Consumer pod<br/>client.py + storage.py"]
+    M["MQTT over ngrok<br/>weh-device/network"] --> C["Consumer pod<br/>src/consumer"]
     C --> T[("TimescaleDB<br/>public.telemetry")]
     T --> G["Grafana pod<br/>provisioned dashboard"]
-    T --> I["Inference pod<br/>init: train.py<br/>main: inference.py"]
+    T --> I["Inference pod<br/>init: src/ai/train.py<br/>main: src/ai/inference.py"]
     D["data/train_1000.json"] --> I
     I --> A["Anomaly context<br/>reason code + scenario<br/>explanation + action"]
     A --> P["MQTT publisher"]
@@ -36,8 +36,8 @@ graph TD
 
 ## Startup sequence
 
-1. `start_linux.sh` creates and activates `.venv`.
-2. `startup.py` installs or locates `kind`, `kubectl`, and Helm.
+1. `scripts/start_linux.sh` creates and activates `.venv`.
+2. `scripts/startup.py` installs or locates `kind`, `kubectl`, and Helm.
 3. Docker builds the single application image.
 4. kind loads the image into cluster nodes.
 5. Helm creates storage, credentials, database, Grafana, consumer, and inference resources.
@@ -58,7 +58,7 @@ radios and `radio_stats`. Valid Wi-Fi radio rows are normalized and written to
 
 ### Model input
 
-`train.py` reads `data/train_1000.json`, uses the labeled `label` field, and
+`src/ai/train.py` reads `data/train_1000.json`, uses the labeled `label` field, and
 writes a serialized LightGBM model with feature columns and scaler metadata to
 `model_artifacts/model.pkl`.
 
