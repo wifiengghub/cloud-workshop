@@ -1119,8 +1119,8 @@
           "type": "postgres",
           "uid": "timescaledb"
         },
-        "definition": "SELECT DISTINCT channel::text FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' ORDER BY channel::integer",
-        "query": "SELECT DISTINCT channel::text FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' ORDER BY channel::integer",
+        "definition": "SELECT channel::text AS channel FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' GROUP BY channel ORDER BY channel",
+        "query": "SELECT channel::text AS channel FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' GROUP BY channel ORDER BY channel",
         "includeAll": true,
         "allValue": ".*",
         "multi": true,

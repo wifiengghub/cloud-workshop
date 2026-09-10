@@ -5,7 +5,7 @@ datasources:
     uid: timescaledb
     type: postgres
     access: proxy
-    url: timescaledb:5432
+    url: ai-flow-timescaledb:5432
     database: telemetry
     user: postgres
     editable: true

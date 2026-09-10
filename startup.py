@@ -25,9 +25,14 @@ def command_path(name: str) -> str | None:
     return shutil.which(name) or (str(LOCAL_BIN / name) if (LOCAL_BIN / name).exists() else None)
 
 
-def run(command: list[str], *, input_text: str | None = None) -> None:
+def run(
+    command: list[str],
+    *,
+    input_text: str | None = None,
+    check: bool = True,
+) -> None:
     print(f"$ {' '.join(command)}", flush=True)
-    subprocess.run(command, cwd=ROOT, check=True, input=input_text, text=True)
+    subprocess.run(command, cwd=ROOT, check=check, input=input_text, text=True)
 
 
 def output(command: list[str]) -> str:
@@ -86,9 +91,28 @@ def ensure_tools() -> dict[str, str]:
     return {"docker": docker, "kind": kind, "kubectl": kubectl, "helm": helm}
 
 
-def ensure_cluster(kind: str) -> None:
+def cluster_container_running(docker: str) -> bool:
+    result = subprocess.run(
+        [docker, "inspect", "-f", "{{.State.Running}}", f"{KIND_CLUSTER}-control-plane"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def ensure_cluster(kind: str, docker: str) -> None:
     clusters = output([kind, "get", "clusters"]).splitlines()
     if KIND_CLUSTER not in clusters:
+        run([kind, "create", "cluster", "--name", KIND_CLUSTER, "--wait", "5m"])
+    elif not cluster_container_running(docker):
+        print(
+            f"Existing kind cluster '{KIND_CLUSTER}' is stopped; recreating it.",
+            flush=True,
+        )
+        run([kind, "delete", "cluster", "--name", KIND_CLUSTER], check=False)
         run([kind, "create", "cluster", "--name", KIND_CLUSTER, "--wait", "5m"])
     else:
         print(f"Using existing kind cluster: {KIND_CLUSTER}", flush=True)
@@ -143,6 +167,13 @@ def show_logs(kubectl: str, follow: bool) -> None:
                 "-f",
             ]
         )
+    else:
+        print(
+            f"Follow all component logs with: {kubectl} logs -n {NAMESPACE} "
+            "-l app.kubernetes.io/instance=ai-flow --all-containers=true "
+            "--max-log-requests=20 --prefix --tail=100 -f",
+            flush=True,
+        )
 
 
 def main() -> int:
@@ -160,7 +191,7 @@ def main() -> int:
             run([tools["kind"], "delete", "cluster", "--name", KIND_CLUSTER])
         return 0
 
-    ensure_cluster(tools["kind"])
+    ensure_cluster(tools["kind"], tools["docker"])
     install_stack(tools, rebuild=not args.no_build, values_file=args.values)
     show_logs(tools["kubectl"], follow=not args.no_follow)
     return 0

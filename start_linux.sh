@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/workspaces}"
+REPO_URL="${REPO_URL:-https://github.com/arnabnexus/devicedatahub-end-to-end.git}"
+PROJECT_NAME="${PROJECT_NAME:-devicedatahub-end-to-end}"
+ROOT_DIR="$WORKSPACE_DIR/$PROJECT_NAME"
 VENV_DIR="$ROOT_DIR/.venv"
 NAMESPACE="devicedatahub"
 GRAFANA_FORWARD="service/ai-flow-grafana 3000:3000"
@@ -19,7 +22,27 @@ fail() {
 
 command -v python3 >/dev/null 2>&1 || fail "python3 is required."
 command -v docker >/dev/null 2>&1 || fail "Docker is required."
+command -v git >/dev/null 2>&1 || fail "git is required."
 docker info >/dev/null 2>&1 || fail "Docker is not running."
+
+mkdir -p "$WORKSPACE_DIR"
+if [[ -d "$ROOT_DIR/.git" ]]; then
+    log "Clone exists; skipping clone: $ROOT_DIR"
+    log "Pulling latest changes"
+    git -C "$ROOT_DIR" pull --ff-only
+elif [[ ! -e "$ROOT_DIR" ]]; then
+    log "Clone not found; cloning $REPO_URL"
+    git clone "$REPO_URL" "$ROOT_DIR"
+else
+    fail "$ROOT_DIR exists but is not a Git repository. Move it or set WORKSPACE_DIR."
+fi
+
+if [[ ! -d "$ROOT_DIR/.git" ]]; then
+    fail "Clone did not complete successfully: $ROOT_DIR"
+fi
+
+cd "$ROOT_DIR"
+log "Using project: $ROOT_DIR"
 
 if [[ ! -d "$VENV_DIR" ]]; then
     log "Creating Python virtual environment at $VENV_DIR"
@@ -33,7 +56,6 @@ python -m pip install --upgrade pip
 python -m pip install -r "$ROOT_DIR/requirements.txt"
 
 log "Starting the Kubernetes stack"
-cd "$ROOT_DIR"
 python startup.py --no-follow
 
 KUBECTL="$(command -v kubectl || true)"
@@ -85,6 +107,22 @@ start_background_forward() {
     log "$name port-forward started in background (PID $pid)"
 }
 
+follow_logs() {
+    local log_args=(
+        logs
+        -n "$NAMESPACE"
+        -l "app.kubernetes.io/instance=ai-flow"
+        --all-containers=true
+        --max-log-requests=20
+        --prefix
+        --tail=100
+        -f
+    )
+    log "Starting all Kubernetes component logs in this terminal"
+    log "Log command: $KUBECTL ${log_args[*]}"
+    exec "$KUBECTL" "${log_args[@]}"
+}
+
 if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; then
     log "No graphical terminal emulator found; starting detached port-forwards."
     start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
@@ -93,16 +131,17 @@ if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; 
     log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
-    exit 0
+    follow_logs
 fi
 
 if ! run_forward "DeviceDataHub TimescaleDB" "service/ai-flow-timescaledb" "5433:5432"; then
     log "Grafana terminal opened, but no second terminal emulator was available."
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
-    exit 1
+    follow_logs
 fi
 
 log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
 log "Keep both child terminals open while using Grafana or the database."
+follow_logs

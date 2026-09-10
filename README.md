@@ -12,10 +12,26 @@ MQTT over ngrok -> consumer -> TimescaleDB -> Grafana
 
 ## Start On Linux
 
-Use the Linux launcher from the repository root:
-
 ```bash
 chmod +x start_linux.sh
+./start_linux.sh
+```
+
+The launcher uses `$HOME/workspaces` as the WSL workspace root, creates it when
+needed, and clones:
+
+```text
+https://github.com/arnabnexus/devicedatahub-end-to-end.git
+```
+
+If `$HOME/workspaces/devicedatahub-end-to-end` already exists as a Git
+repository, it prints a clone-skipped message, runs `git pull --ff-only`, and
+starts from the updated project. Override the location or repository when
+needed:
+
+```bash
+WORKSPACE_DIR="$HOME/workspaces" \
+REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
 ./start_linux.sh
 ```
 

@@ -119,6 +119,23 @@ chmod +x start_linux.sh
 ./start_linux.sh
 ```
 
+The launcher checks `$HOME/workspaces` when you log in to WSL. It creates that
+directory if needed, clones the GitHub repository on the first run, and prints
+a clone-skipped message before running `git pull --ff-only` on later runs:
+
+```text
+$HOME/workspaces/devicedatahub-end-to-end
+```
+
+Override the repository or workspace location with `REPO_URL` and
+`WORKSPACE_DIR`:
+
+```bash
+WORKSPACE_DIR="$HOME/workspaces" \
+REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
+./start_linux.sh
+```
+
 It creates and activates `.venv`, installs `requirements.txt`, runs
 `startup.py --no-follow`, then opens two child terminal windows, or starts two
 detached background processes in a headless shell, for:
@@ -365,6 +382,3 @@ kubectl logs -n devicedatahub statefulset/ai-flow-timescaledb --tail=100
 helm uninstall ai-flow -n devicedatahub
 python3 startup.py --no-build
 ```
-kubectl port-forward service/ai-flow-grafana 3000:3000   --namespace=devicedatahub
-
-kubectl port-forward service/ai-flow-timescaledb 5433:5432 --namespace=devicedatahub
