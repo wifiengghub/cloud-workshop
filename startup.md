@@ -17,9 +17,20 @@ installs the Helm chart, waits for the pods, and follows their logs.
 
 ## Prerequisites
 
-Install Docker Engine and start the Docker daemon. The script also needs a
-system Python with the `venv` module. It downloads `kind`, `kubectl`, and
-`helm` into `~/.local/bin` when they are not already installed.
+On a raw Ubuntu WSL install, `start_linux.sh` installs missing Git, Python,
+`python3-venv`, certificates, and curl packages using `sudo apt-get`. It also
+downloads `kind`, `kubectl`, and `helm` into `~/.local/bin` when they are not
+already installed.
+
+The launcher installs the Ubuntu `docker.io` package when Docker is missing and
+starts Docker Engine with systemd, the service command, or a background
+`dockerd` fallback. Your WSL distribution must support the Docker Engine
+kernel/cgroup requirements; if the daemon cannot start, inspect
+`/tmp/devicedatahub-dockerd.log`.
+
+GitHub CLI is optional. This public HTTPS repository clones with Git and does
+not require `gh auth login`. Use GitHub CLI authentication only for a private
+repository or private SSH workflow.
 
 Verify Docker and Python:
 
@@ -139,6 +150,16 @@ REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
 It creates and activates `.venv`, installs `requirements.txt`, runs
 `startup.py --no-follow`, then opens two child terminal windows, or starts two
 detached background processes in a headless shell, for:
+
+Before deployment it asks:
+
+```text
+Enable local MQTT simulator and broker? [y/N]:
+```
+
+Answer `Yes` to deploy the local Mosquitto broker and `simulator.py`. The
+simulator publishes randomized normal and anomaly payloads to the consumer.
+Answer `No` to preserve the normal ngrok MQTT flow.
 
 ```bash
 kubectl port-forward service/ai-flow-grafana 3000:3000 \

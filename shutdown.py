@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+SCRIPT_ROOT = Path(__file__).resolve().parent
+WORKSPACE_ROOT = Path(os.getenv("WORKSPACE_DIR", Path.home() / "workspaces"))
+PROJECT_NAME = os.getenv("PROJECT_NAME", "devicedatahub-end-to-end")
+CLONED_ROOT = WORKSPACE_ROOT / PROJECT_NAME
+ROOT = CLONED_ROOT if (CLONED_ROOT / ".git").is_dir() else SCRIPT_ROOT
 VENV = ROOT / ".venv"
 RUNTIME_DIR = ROOT / ".runtime"
 LOCAL_BIN = Path.home() / ".local" / "bin"

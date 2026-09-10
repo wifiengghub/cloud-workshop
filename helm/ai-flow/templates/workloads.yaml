@@ -94,6 +94,43 @@ spec:
               value: {{ .Values.database.table | quote }}
           resources:
             {{- toYaml .Values.consumer.resources | nindent 12 }}
+{{- if .Values.simulator.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-simulator
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ai-flow.name" . }}-simulator
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ai-flow.name" . }}-simulator
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: simulator
+          image: "{{ .Values.simulator.image }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "simulator.py"]
+          env:
+            - name: SIMULATOR_MQTT_HOST
+              value: {{ include "ai-flow.fullname" . }}-mqtt-broker
+            - name: SIMULATOR_MQTT_PORT
+              value: "1883"
+            - name: SIMULATOR_MQTT_TOPIC
+              value: {{ .Values.simulator.topic | quote }}
+            - name: SIMULATOR_INTERVAL_SECONDS
+              value: {{ .Values.simulator.intervalSeconds | quote }}
+            - name: SIMULATOR_ANOMALY_RATE
+              value: {{ .Values.simulator.anomalyRate | quote }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

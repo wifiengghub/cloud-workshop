@@ -1,0 +1,26 @@
+mqtt:
+  host: ai-flow-mqtt-broker
+  port: 1883
+  topic: weh-device/network
+  clientId: telemetry-consumer-simulate
+  username: ""
+  password: ""
+
+alerts:
+  host: ai-flow-mqtt-broker
+  port: 1883
+  baseTopic: wifi/alerts
+  username: ""
+  password: ""
+  enabled: true
+
+broker:
+  enabled: true
+  image: eclipse-mosquitto:2
+
+simulator:
+  enabled: true
+  image: devicedatahub-ai-flow:latest
+  intervalSeconds: 5
+  anomalyRate: 0.35
+  topic: weh-device/network

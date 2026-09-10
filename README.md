@@ -37,22 +37,35 @@ REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
 
 `start_linux.sh` performs the complete startup sequence:
 
-1. Creates `.venv` if it does not exist.
-2. Activates the virtual environment.
-3. Installs `requirements.txt`.
-4. Runs `startup.py --no-follow`.
-5. Creates or reuses the `devicedatahub` kind cluster.
-6. Builds `devicedatahub-ai-flow:latest`.
-7. Loads the image into the kind nodes.
-8. Installs or upgrades the `helm/ai-flow` chart.
-9. Starts TimescaleDB, Grafana, the MQTT consumer, and inference pods.
-10. Trains the model from `data/train_1000.json` in the inference pod init container.
-11. Starts `inference.py` only after training and database readiness succeed.
-12. Starts Grafana and TimescaleDB port-forward processes.
+
+2. Installs and starts Docker Engine when it is missing or stopped.
+3. Creates `.venv` if it does not exist.
+4. Activates the virtual environment.
+5. Installs `requirements.txt`.
+6. Asks whether to enable the local MQTT simulator.
+7. Runs `startup.py --no-follow` with `values.simulate.yaml` only when enabled.
+8. Creates or reuses the `devicedatahub` kind cluster.
+9. Builds `devicedatahub-ai-flow:latest`.
+10. Loads the image into the kind nodes.
+11. Installs or upgrades the `helm/ai-flow` chart.
+12. Starts TimescaleDB, Grafana, the MQTT consumer, and inference pods.
+13. Trains the model from `data/train_1000.json` in the inference pod init container.
+14. Starts `inference.py` only after training and database readiness succeed.
+15. Starts Grafana and TimescaleDB port-forward processes.
+
+GitHub CLI is not required for this public HTTPS repository. `git clone` works
+without `gh auth login`. GitHub CLI authentication is only needed if you change
+`REPO_URL` to a private repository or use an SSH/private GitHub workflow.
 
 The script supports graphical terminals. In WSL or a headless Linux shell it
 runs the port-forwards in the background and writes their logs and PIDs under
 `.runtime/`.
+
+Answer `Yes` to the simulator prompt to deploy Mosquitto and `simulator.py` as
+Kubernetes workloads. The simulator publishes randomized normal and anomaly
+telemetry to the same topic consumed by the existing consumer. Answer `No` to
+keep the ngrok MQTT flow unchanged. See [README.simulate.md](README.simulate.md)
+for simulator settings.
 
 ## Grafana And Database Access
 
@@ -216,3 +229,4 @@ python3 shutdown.py --keep-venv
 - [helm/ai-flow](helm/ai-flow): complete Kubernetes chart
 - [ARCHITECTURE.md](ARCHITECTURE.md): component and data-flow diagram
 - [DESIGN_REQUIREMENTS.md](DESIGN_REQUIREMENTS.md): application requirements and acceptance criteria
+- [README.simulate.md](README.simulate.md): local MQTT simulator operation

@@ -20,10 +20,62 @@ fail() {
     exit 1
 }
 
-command -v python3 >/dev/null 2>&1 || fail "python3 is required."
-command -v docker >/dev/null 2>&1 || fail "Docker is required."
-command -v git >/dev/null 2>&1 || fail "git is required."
-docker info >/dev/null 2>&1 || fail "Docker is not running."
+install_wsl_prerequisites() {
+    local missing=()
+    command -v git >/dev/null 2>&1 || missing+=(git)
+    command -v python3 >/dev/null 2>&1 || missing+=(python3)
+    command -v docker >/dev/null 2>&1 || missing+=(docker.io)
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -m venv --help >/dev/null 2>&1 || missing+=(python3-venv)
+    fi
+
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        return
+    fi
+
+    command -v apt-get >/dev/null 2>&1 || fail "Missing WSL packages: ${missing[*]}. Install them with your Linux package manager."
+    command -v sudo >/dev/null 2>&1 || fail "Missing WSL packages: ${missing[*]}. Install them with apt-get as root."
+
+    log "Installing WSL prerequisites: ${missing[*]}"
+    sudo apt-get update
+    sudo apt-get install -y git python3 python3-venv ca-certificates curl docker.io
+}
+
+install_wsl_prerequisites
+
+start_docker_engine() {
+    if docker info >/dev/null 2>&1; then
+        return
+    fi
+
+    log "Starting Docker Engine"
+    if command -v systemctl >/dev/null 2>&1 && systemctl is-system-running >/dev/null 2>&1; then
+        sudo systemctl enable --now docker
+    elif command -v service >/dev/null 2>&1; then
+        sudo service docker start
+    else
+        log "systemd/service unavailable; starting dockerd in the background"
+        sudo nohup dockerd >/tmp/devicedatahub-dockerd.log 2>&1 < /dev/null &
+    fi
+
+    for attempt in $(seq 1 30); do
+        if docker info >/dev/null 2>&1; then
+            return
+        fi
+        sleep 1
+    done
+
+    fail "Docker Engine could not start. Check /tmp/devicedatahub-dockerd.log and WSL systemd/cgroup support."
+}
+
+command -v docker >/dev/null 2>&1 || fail "Docker Engine installation failed."
+start_docker_engine
+
+if command -v gh >/dev/null 2>&1; then
+    log "GitHub CLI detected. Public HTTPS cloning does not require gh auth login."
+else
+    log "GitHub CLI is not required for this public HTTPS repository; using git clone."
+fi
 
 mkdir -p "$WORKSPACE_DIR"
 if [[ -d "$ROOT_DIR/.git" ]]; then
@@ -55,8 +107,23 @@ log "Installing Python requirements"
 python -m pip install --upgrade pip
 python -m pip install -r "$ROOT_DIR/requirements.txt"
 
+SIMULATE=false
+if [[ -t 0 ]]; then
+    read -r -p "Enable local MQTT simulator and broker? [y/N]: " simulation_answer
+    if [[ "$simulation_answer" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        SIMULATE=true
+    fi
+fi
+
 log "Starting the Kubernetes stack"
-python startup.py --no-follow
+startup_args=(startup.py --no-follow)
+if [[ "$SIMULATE" == true ]]; then
+    log "Simulation enabled: using helm/ai-flow/values.simulate.yaml"
+    startup_args+=(--values helm/ai-flow/values.simulate.yaml)
+else
+    log "Simulation disabled: using the configured ngrok MQTT broker"
+fi
+python "${startup_args[@]}"
 
 KUBECTL="$(command -v kubectl || true)"
 if [[ -z "$KUBECTL" && -x "$HOME/.local/bin/kubectl" ]]; then
