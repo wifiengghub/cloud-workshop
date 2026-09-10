@@ -4,34 +4,34 @@
 
 ```mermaid
 flowchart LR
-    M[MQTT over ngrok\nweh-device/network] --> C[Consumer pod\nclient.py + storage.py]
-    C --> T[(TimescaleDB\npublic.telemetry)]
-    T --> G[Grafana pod\nprovisioned dashboard]
-    T --> I[Inference pod\ninit: train.py\nmain: inference.py]
-    D[data/train_1000.json] --> I
-    I --> A[Anomaly context\nreason code + scenario\nexplanation + action]
-    A --> P[MQTT publisher]
-    P --> M2[wifi/alerts/{device}/anomaly\nwifi/alerts/{device}/status\nwifi/alerts/summary]
+    M["MQTT over ngrok<br/>weh-device/network"] --> C["Consumer pod<br/>client.py + storage.py"]
+    C --> T[("TimescaleDB<br/>public.telemetry")]
+    T --> G["Grafana pod<br/>provisioned dashboard"]
+    T --> I["Inference pod<br/>init: train.py<br/>main: inference.py"]
+    D["data/train_1000.json"] --> I
+    I --> A["Anomaly context<br/>reason code + scenario<br/>explanation + action"]
+    A --> P["MQTT publisher"]
+    P --> M2["wifi/alerts/{device}/anomaly<br/>wifi/alerts/{device}/status<br/>wifi/alerts/summary"]
 ```
 
 ## Kubernetes components
 
 ```mermaid
 graph TD
-    K[kind cluster: devicedatahub]
-    H[Helm release: ai-flow]
+    K["kind cluster: devicedatahub"]
+    H["Helm release: ai-flow"]
     K --> H
-    H --> DB[StatefulSet: ai-flow-timescaledb]
-    H --> C[Deployment: ai-flow-consumer]
-    H --> I[Deployment: ai-flow-inference]
-    H --> G[Deployment: ai-flow-grafana]
-    H --> V1[PVC: model]
-    H --> V2[PVC: logs]
-    H --> V3[PVC: TimescaleDB]
-    H --> S[Secrets and ConfigMaps]
-    I --> W[wait-for-database init]
-    W --> TR[train-model init]
-    TR --> INF[inference container]
+    H --> DB["StatefulSet: ai-flow-timescaledb"]
+    H --> C["Deployment: ai-flow-consumer"]
+    H --> I["Deployment: ai-flow-inference"]
+    H --> G["Deployment: ai-flow-grafana"]
+    H --> V1["PVC: model"]
+    H --> V2["PVC: logs"]
+    H --> V3["PVC: TimescaleDB"]
+    H --> S["Secrets and ConfigMaps"]
+    I --> W["wait-for-database init"]
+    W --> TR["train-model init"]
+    TR --> INF["inference container"]
 ```
 
 ## Startup sequence
