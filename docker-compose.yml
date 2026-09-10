@@ -1,0 +1,107 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_DB: telemetry
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d telemetry"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  consumer:
+    build: .
+    command: ["python", "consumer.py"]
+    environment:
+      MQTT_BROKER_HOST: ${MQTT_BROKER_HOST:-0.tcp.in.ngrok.io}
+      MQTT_BROKER_PORT: ${MQTT_BROKER_PORT:-24839}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-telemetry-consumer}
+      MQTT_TOPIC: ${MQTT_TOPIC:-weh-device/network}
+      MQTT_QOS: ${MQTT_QOS:-0}
+      MQTT_KEEPALIVE: ${MQTT_KEEPALIVE:-60}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: telemetry
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_TABLE: telemetry
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  trainer:
+    build: .
+    command: ["python", "train.py", "--data", "data/train_1000.json", "--out", "model_artifacts/model.pkl"]
+    volumes:
+      - ./data:/app/data:ro
+      - ./model_artifacts:/app/model_artifacts
+
+  inference:
+    build: .
+    command: ["python", "inference.py"]
+    environment:
+      MODEL_PATH: model_artifacts/model.pkl
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-30}
+      ALERT_THRESHOLD: ${ALERT_THRESHOLD:-0.5}
+      WINDOW_MINUTES: ${WINDOW_MINUTES:-5}
+      POLL_LOOKBACK_MINUTES: ${POLL_LOOKBACK_MINUTES:-2}
+      ANOMALY_LOG_DIR: logs/anomalies
+      MQTT_ENABLED: ${MQTT_ENABLED:-true}
+      MQTT_HOST: ${MQTT_HOST:-0.tcp.in.ngrok.io}
+      MQTT_PORT: ${MQTT_PORT:-24839}
+      MQTT_BASE_TOPIC: ${MQTT_BASE_TOPIC:-wifi/alerts}
+      MQTT_USER: ${MQTT_USER:-}
+      MQTT_PASS: ${MQTT_PASS:-}
+      TS_HOST: timescaledb
+      TS_PORT: 5432
+      TS_USER: postgres
+      TS_PASS: postgres
+      TS_DB: telemetry
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: telemetry
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_TABLE: telemetry
+    volumes:
+      - ./model_artifacts:/app/model_artifacts:ro
+      - ./logs:/app/logs
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/telemetry.json:ro
+    restart: unless-stopped
+
+volumes:
+  timescaledb_data:
+  grafana_data:

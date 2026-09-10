@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-credentials
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  DB_PASSWORD: {{ .Values.database.password | quote }}
+  MQTT_USERNAME: {{ .Values.mqtt.username | quote }}
+  MQTT_PASSWORD: {{ .Values.mqtt.password | quote }}
+  ALERT_MQTT_USERNAME: {{ .Values.alerts.username | quote }}
+  ALERT_MQTT_PASSWORD: {{ .Values.alerts.password | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-grafana-datasource
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+data:
+  timescaledb.yml: |
+    {{- .Files.Get "files/timescaledb.yml" | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-grafana-dashboard
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+data:
+  dashboard.json: |
+    {{- .Files.Get "files/dashboard.json" | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-grafana-provider
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: DeviceDataHub
+        orgId: 1
+        folder: DeviceDataHub
+        type: file
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards

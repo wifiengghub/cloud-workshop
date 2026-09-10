@@ -1,0 +1,229 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-consumer
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ai-flow.name" . }}-consumer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ai-flow.name" . }}-consumer
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-database
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import os
+              import time
+              import psycopg2
+              for attempt in range(60):
+                  try:
+                      psycopg2.connect(host=os.environ["DB_HOST"], port=int(os.environ["DB_PORT"]), dbname=os.environ["DB_NAME"], user=os.environ["DB_USER"], password=os.environ["DB_PASSWORD"], connect_timeout=3).close()
+                      break
+                  except psycopg2.OperationalError:
+                      time.sleep(5)
+              else:
+                  raise SystemExit("TimescaleDB did not become ready")
+          env:
+            - name: DB_HOST
+              value: {{ include "ai-flow.fullname" . }}-timescaledb
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: DB_USER
+              value: {{ .Values.database.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: DB_PASSWORD
+      containers:
+        - name: consumer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "consumer.py"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: MQTT_BROKER_HOST
+              value: {{ .Values.mqtt.host | quote }}
+            - name: MQTT_BROKER_PORT
+              value: {{ .Values.mqtt.port | quote }}
+            - name: MQTT_CLIENT_ID
+              value: {{ .Values.mqtt.clientId | quote }}
+            - name: MQTT_TOPIC
+              value: {{ .Values.mqtt.topic | quote }}
+            - name: MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: MQTT_USERNAME
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: MQTT_PASSWORD
+            - name: DB_HOST
+              value: {{ include "ai-flow.fullname" . }}-timescaledb
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: DB_USER
+              value: {{ .Values.database.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: DB_PASSWORD
+            - name: DB_TABLE
+              value: {{ .Values.database.table | quote }}
+          resources:
+            {{- toYaml .Values.consumer.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-inference
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.inference.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ai-flow.name" . }}-inference
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ai-flow.name" . }}-inference
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.training.enabled }}
+      initContainers:
+        - name: wait-for-database
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import os
+              import time
+              import psycopg2
+              for attempt in range(60):
+                  try:
+                      psycopg2.connect(host=os.environ["DB_HOST"], port=int(os.environ["DB_PORT"]), dbname=os.environ["DB_NAME"], user=os.environ["DB_USER"], password=os.environ["DB_PASSWORD"], connect_timeout=3).close()
+                      break
+                  except psycopg2.OperationalError:
+                      time.sleep(5)
+              else:
+                  raise SystemExit("TimescaleDB did not become ready")
+          env:
+            - name: DB_HOST
+              value: {{ include "ai-flow.fullname" . }}-timescaledb
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: DB_USER
+              value: {{ .Values.database.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: DB_PASSWORD
+        - name: train-model
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "train.py", "--data", {{ .Values.training.dataPath | quote }}, "--out", {{ .Values.training.modelPath | quote }}]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: model
+              mountPath: /app/model_artifacts
+      {{- end }}
+      containers:
+        - name: inference
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "inference.py"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: MODEL_PATH
+              value: {{ .Values.training.modelPath | quote }}
+            - name: POLL_INTERVAL_SECONDS
+              value: {{ .Values.inference.pollIntervalSeconds | quote }}
+            - name: ALERT_THRESHOLD
+              value: {{ .Values.inference.alertThreshold | quote }}
+            - name: WINDOW_MINUTES
+              value: {{ .Values.inference.windowMinutes | quote }}
+            - name: POLL_LOOKBACK_MINUTES
+              value: {{ .Values.inference.pollLookbackMinutes | quote }}
+            - name: ANOMALY_LOG_DIR
+              value: logs/anomalies
+            - name: MQTT_ENABLED
+              value: {{ .Values.alerts.enabled | quote }}
+            - name: MQTT_HOST
+              value: {{ .Values.alerts.host | quote }}
+            - name: MQTT_PORT
+              value: {{ .Values.alerts.port | quote }}
+            - name: MQTT_BASE_TOPIC
+              value: {{ .Values.alerts.baseTopic | quote }}
+            - name: MQTT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: ALERT_MQTT_USERNAME
+            - name: MQTT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: ALERT_MQTT_PASSWORD
+            - name: TS_HOST
+              value: {{ include "ai-flow.fullname" . }}-timescaledb
+            - name: TS_PORT
+              value: "5432"
+            - name: TS_USER
+              value: {{ .Values.database.user | quote }}
+            - name: TS_DB
+              value: {{ .Values.database.name | quote }}
+            - name: TS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: DB_PASSWORD
+            - name: DB_TABLE
+              value: {{ .Values.database.table | quote }}
+          volumeMounts:
+            - name: model
+              mountPath: /app/model_artifacts
+              readOnly: true
+            - name: logs
+              mountPath: /app/logs
+          resources:
+            {{- toYaml .Values.inference.resources | nindent 12 }}
+      volumes:
+        - name: model
+          persistentVolumeClaim:
+            claimName: {{ include "ai-flow.fullname" . }}-model
+        - name: logs
+          persistentVolumeClaim:
+            claimName: {{ include "ai-flow.fullname" . }}-logs

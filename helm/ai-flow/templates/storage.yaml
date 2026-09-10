@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-model
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.modelStorage.size }}
+  {{- with .Values.modelStorage.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-logs
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.logsStorage.size }}
+  {{- with .Values.logsStorage.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- if .Values.timescaledb.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-timescaledb
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.timescaledb.storage }}
+  {{- with .Values.timescaledb.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}
+{{- if .Values.grafana.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-grafana
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.grafana.storage }}
+  {{- with .Values.grafana.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,1162 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_TIMESCALEDB",
+      "label": "TimescaleDB",
+      "description": "TimescaleDB/PostgreSQL datasource containing telemetry",
+      "type": "datasource",
+      "pluginId": "postgres",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "NOC Overview",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Radios",
+      "description": "Distinct device/radio/interface combinations reporting in the selected time range.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COUNT(DISTINCT device_id || '|' || radio || '|' || ifname) AS value FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}';"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Clients",
+      "description": "Latest total client population across selected radios.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COALESCE(SUM(client_count),0) AS value FROM (SELECT DISTINCT ON (device_id,radio,ifname) device_id,radio,ifname,client_count FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY device_id,radio,ifname,timestamp DESC) x;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Channel Utilization",
+      "description": "Average channel utilization.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(channel_utilization_pct)::numeric,1) AS value FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}';"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "CCA Busy",
+      "description": "Average clear-channel-assessment busy percentage.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(cca_busy_pct)::numeric,1) AS value FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}';"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Interference",
+      "description": "Average interference utilization.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(interference_utilization_pct)::numeric,1) AS value FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}';"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Weak Clients",
+      "description": "Latest number of weak clients.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COALESCE(SUM(weak_client_count),0) AS value FROM (SELECT DISTINCT ON (device_id,radio,ifname) device_id,radio,ifname,weak_client_count FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY device_id,radio,ifname,timestamp DESC) x;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "orientation": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "RF Health",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Channel Utilization %",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, channel_utilization_pct AS \"Channel Utilization %\", device_id || ' / ' || radio || ' / ch' || channel::text AS series FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "CCA Busy %",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 7
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, cca_busy_pct AS \"CCA Busy %\", device_id || ' / ' || radio || ' / ch' || channel::text AS series FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "OBSS / Interference",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 7
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, obss_utilization_pct AS \"OBSS %\", interference_utilization_pct AS \"Interference %\" FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Client RF Experience",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Average RSSI",
+      "description": "Client-dependent metric. Zero is treated as N/A when no clients are connected.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, NULLIF(avg_rssi_dbm,0) AS \"Average RSSI dBm\" FROM telemetry WHERE $__timeFilter(timestamp) AND client_count > 0 AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -75
+              },
+              {
+                "color": "yellow",
+                "value": -65
+              },
+              {
+                "color": "green",
+                "value": -55
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Average SNR",
+      "description": "Client-dependent metric. Zero is treated as N/A when no clients are connected.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, NULLIF(avg_snr_db,0) AS \"Average SNR dB\" FROM telemetry WHERE $__timeFilter(timestamp) AND client_count > 0 AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dB",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Average TX / RX Rate",
+      "description": "Client-dependent rate metrics. Zero values are treated as N/A.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, NULLIF(avg_tx_rate_mbps,0) AS \"TX Mbps\", NULLIF(avg_rx_rate_mbps,0) AS \"RX Mbps\" FROM telemetry WHERE $__timeFilter(timestamp) AND client_count > 0 AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Radio / Channel Operations",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "table",
+      "title": "Latest Radio Health",
+      "description": "Latest record per device/radio/interface.",
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT DISTINCT ON (device_id,radio,ifname) timestamp,schema_version,device_id,network_type,radio,ifname,channel,frequency_mhz,bandwidth_mhz,channel_utilization_pct,tx_airtime_pct,rx_airtime_pct,cca_busy_pct,noise_floor_dbm,client_count,active_client_count,CASE WHEN client_count=0 THEN NULL ELSE avg_rssi_dbm END AS avg_rssi_dbm,CASE WHEN client_count=0 THEN NULL ELSE min_rssi_dbm END AS min_rssi_dbm,CASE WHEN client_count=0 THEN NULL ELSE avg_snr_db END AS avg_snr_db,CASE WHEN client_count=0 THEN NULL ELSE min_snr_db END AS min_snr_db,CASE WHEN client_count=0 THEN NULL ELSE avg_tx_rate_mbps END AS avg_tx_rate_mbps,CASE WHEN client_count=0 THEN NULL ELSE avg_rx_rate_mbps END AS avg_rx_rate_mbps,tx_packets,rx_packets,tx_bytes,rx_bytes,tx_retries,tx_failed,tx_airtime_client_pct,rx_airtime_client_pct,CASE WHEN client_count=0 THEN NULL ELSE avg_mcs END AS avg_mcs,CASE WHEN client_count=0 THEN NULL ELSE min_mcs END AS min_mcs,CASE WHEN client_count=0 THEN NULL ELSE avg_nss END AS avg_nss,weak_client_count,neighbor_ap_count,strong_neighbor_ap_count,same_channel_ap_count,strong_same_channel_ap_count,obss_utilization_pct,interference_utilization_pct FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY device_id,radio,ifname,timestamp DESC;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "table",
+      "title": "Channel Congestion Analysis",
+      "description": "Channel utilization, CCA, OBSS, interference and AP density.",
+      "gridPos": {
+        "h": 10,
+        "w": 10,
+        "x": 14,
+        "y": 25
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT radio,channel,frequency_mhz,bandwidth_mhz,ROUND(AVG(channel_utilization_pct)::numeric,1) AS avg_channel_utilization_pct,ROUND(AVG(cca_busy_pct)::numeric,1) AS avg_cca_busy_pct,ROUND(AVG(obss_utilization_pct)::numeric,1) AS avg_obss_pct,ROUND(AVG(interference_utilization_pct)::numeric,1) AS avg_interference_pct,MAX(neighbor_ap_count) AS neighbor_aps,MAX(strong_neighbor_ap_count) AS strong_neighbor_aps,MAX(same_channel_ap_count) AS same_channel_aps,MAX(strong_same_channel_ap_count) AS strong_same_channel_aps FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' GROUP BY radio,channel,frequency_mhz,bandwidth_mhz ORDER BY avg_channel_utilization_pct DESC;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Traffic & Reliability",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "TX / RX Airtime",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time,tx_airtime_pct AS \"TX Airtime %\",rx_airtime_pct AS \"RX Airtime %\",tx_airtime_client_pct AS \"Client TX Airtime %\",rx_airtime_client_pct AS \"Client RX Airtime %\" FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "TX Retries / Failures",
+      "description": "Raw cumulative counters. Alerting should use a retry ratio or rate.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 36
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time,tx_retries AS \"TX Retries\",tx_failed AS \"TX Failed\" FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Packet Counters",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time,tx_packets AS \"TX Packets\",rx_packets AS \"RX Packets\" FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Complete Telemetry",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 51,
+      "type": "table",
+      "title": "Raw Telemetry — All 41 Fields",
+      "description": "Complete telemetry records. Client-dependent placeholder zeros are represented as N/A.",
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT timestamp,schema_version,device_id,network_type,radio,ifname,channel,frequency_mhz,bandwidth_mhz,channel_utilization_pct,tx_airtime_pct,rx_airtime_pct,cca_busy_pct,noise_floor_dbm,client_count,active_client_count,CASE WHEN client_count=0 THEN NULL ELSE avg_rssi_dbm END AS avg_rssi_dbm,CASE WHEN client_count=0 THEN NULL ELSE min_rssi_dbm END AS min_rssi_dbm,CASE WHEN client_count=0 THEN NULL ELSE avg_snr_db END AS avg_snr_db,CASE WHEN client_count=0 THEN NULL ELSE min_snr_db END AS min_snr_db,CASE WHEN client_count=0 THEN NULL ELSE avg_tx_rate_mbps END AS avg_tx_rate_mbps,CASE WHEN client_count=0 THEN NULL ELSE avg_rx_rate_mbps END AS avg_rx_rate_mbps,tx_packets,rx_packets,tx_bytes,rx_bytes,tx_retries,tx_failed,tx_airtime_client_pct,rx_airtime_client_pct,CASE WHEN client_count=0 THEN NULL ELSE avg_mcs END AS avg_mcs,CASE WHEN client_count=0 THEN NULL ELSE min_mcs END AS min_mcs,CASE WHEN client_count=0 THEN NULL ELSE avg_nss END AS avg_nss,weak_client_count,neighbor_ap_count,strong_neighbor_ap_count,same_channel_ap_count,strong_same_channel_ap_count,obss_utilization_pct,interference_utilization_pct,clients FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' ORDER BY timestamp DESC LIMIT 1000;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true
+        }
+      }
+    },
+    {
+      "id": 52,
+      "type": "table",
+      "title": "Client JSONB Records",
+      "description": "Only records containing one or more client objects are displayed.",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT timestamp,device_id,network_type,radio,ifname,channel,client_count,jsonb_array_length(COALESCE(clients,'[]'::jsonb)) AS client_json_count,clients FROM telemetry WHERE $__timeFilter(timestamp) AND device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' AND network_type ~ '${network_type:regex}' AND channel::text ~ '${channel:regex}' AND jsonb_array_length(COALESCE(clients,'[]'::jsonb)) > 0 ORDER BY timestamp DESC LIMIT 500;"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "wifi",
+    "wireless",
+    "timescaledb",
+    "telemetry",
+    "noc",
+    "radio",
+    "rf-health"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT DISTINCT device_id FROM telemetry ORDER BY device_id",
+        "query": "SELECT DISTINCT device_id FROM telemetry ORDER BY device_id",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "network_type",
+        "label": "Network Type",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT DISTINCT network_type FROM telemetry ORDER BY network_type",
+        "query": "SELECT DISTINCT network_type FROM telemetry ORDER BY network_type",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "radio",
+        "label": "Radio",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT DISTINCT radio FROM telemetry WHERE device_id ~ '${device:regex}' ORDER BY radio",
+        "query": "SELECT DISTINCT radio FROM telemetry WHERE device_id ~ '${device:regex}' ORDER BY radio",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "ifname",
+        "label": "Interface",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT DISTINCT ifname FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' ORDER BY ifname",
+        "query": "SELECT DISTINCT ifname FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' ORDER BY ifname",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "channel",
+        "label": "Channel",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT DISTINCT channel::text FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' ORDER BY channel::integer",
+        "query": "SELECT DISTINCT channel::text FROM telemetry WHERE device_id ~ '${device:regex}' AND radio ~ '${radio:regex}' AND ifname ~ '${ifname:regex}' ORDER BY channel::integer",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "7d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Wi-Fi Radio Health & NOC Operations — TimescaleDB",
+  "uid": "wifi-radio-health-tsdb",
+  "version": 1
+}

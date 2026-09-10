@@ -1,0 +1,95 @@
+image:
+  repository: devicedatahub-ai-flow
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+mqtt:
+  host: 0.tcp.in.ngrok.io
+  port: 24839
+  topic: weh-device/network
+  clientId: telemetry-consumer
+  username: ""
+  password: ""
+
+alerts:
+  host: 0.tcp.in.ngrok.io
+  port: 24839
+  baseTopic: wifi/alerts
+  username: ""
+  password: ""
+  enabled: true
+
+database:
+  name: telemetry
+  user: postgres
+  password: postgres
+  table: telemetry
+
+timescaledb:
+  enabled: true
+  image: timescale/timescaledb:latest-pg16
+  storage: 10Gi
+  storageClassName: ""
+
+grafana:
+  enabled: true
+  image: grafana/grafana-oss:latest
+  adminUser: admin
+  adminPassword: admin
+  storage: 5Gi
+  storageClassName: ""
+  service:
+    type: NodePort
+    port: 3000
+    nodePort: 30300
+
+training:
+  enabled: true
+  dataPath: data/train_1000.json
+  modelPath: model_artifacts/model.pkl
+
+inference:
+  replicas: 1
+  pollIntervalSeconds: 30
+  alertThreshold: 0.5
+  windowMinutes: 5
+  pollLookbackMinutes: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+consumer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+modelStorage:
+  size: 1Gi
+  storageClassName: ""
+
+logsStorage:
+  size: 1Gi
+  storageClassName: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
