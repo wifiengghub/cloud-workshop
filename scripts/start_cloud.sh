@@ -44,9 +44,13 @@ install_wsl_prerequisites
 git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
     || fail "Run this script from a Git checkout of the project. Expected repository at $ROOT_DIR."
 
-log "Pulling latest changes for the existing checkout"
-git -C "$ROOT_DIR" pull --ff-only \
-    || fail "Could not update the checkout. Resolve local changes or pull conflicts, then rerun."
+if [[ -z "$(git -C "$ROOT_DIR" status --porcelain)" ]]; then
+    log "Pulling latest changes for the existing checkout"
+    git -C "$ROOT_DIR" pull --ff-only \
+        || fail "Could not update the checkout. Resolve local changes or pull conflicts, then rerun."
+else
+    log "Local changes detected; skipping git pull."
+fi
 
 export PATH="$ROOT_DIR/.local/bin:$PATH"
 
@@ -140,27 +144,6 @@ for attempt in $(seq 1 30); do
     sleep 2
 done
 
-run_forward() {
-    local title="$1"
-    local name="$2"
-    local resource="$3"
-    local ports="$4"
-    local pid_file="$RUNTIME_DIR/$name.port-forward.pid"
-    local command="cd $(printf '%q' "$ROOT_DIR") && echo 'Forwarding $resource $ports' && bash $(printf '%q' "$SCRIPT_DIR/port_forward.sh") $(printf '%q' "$pid_file") $(printf '%q' "$KUBECTL") port-forward $(printf '%q' "$resource") $(printf '%q' "$ports") --namespace=$(printf '%q' "$NAMESPACE")"
-
-    if command -v gnome-terminal >/dev/null 2>&1; then
-        gnome-terminal --title="$title" -- bash -lc "$command; exec bash" &
-    elif command -v konsole >/dev/null 2>&1; then
-        konsole --new-tab -p tabtitle="$title" -e bash -lc "$command; exec bash" &
-    elif command -v x-terminal-emulator >/dev/null 2>&1; then
-        x-terminal-emulator -T "$title" -e bash -lc "$command; exec bash" &
-    elif command -v xterm >/dev/null 2>&1; then
-        xterm -T "$title" -e bash -lc "$command; exec bash" &
-    else
-        return 1
-    fi
-}
-
 start_background_forward() {
     local name="$1"
     local resource="$2"
@@ -200,61 +183,22 @@ print_followup_commands() {
     printf '  python3 scripts/shutdown.py\n'
 }
 
-if ! run_forward "DeviceDataHub Grafana" "grafana" "service/ai-flow-grafana" "3000:3000"; then
-    log "No graphical terminal emulator found; starting detached port-forwards."
-    start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
-    start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
-    start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
-    start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
-    start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
-    log "Grafana: http://localhost:3000"
-    log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
-    log "TimescaleDB: localhost:5433"
-    log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
-    log "Grafana URL: http://localhost:3000"
-    log "MQTT messages UI: http://localhost:5000"
-    log "TimescaleDB records UI: http://localhost:6080"
-    log "Monitor pages auto-refresh every 30 seconds; choose a time range and use Load older records."
-    print_followup_commands
-    exit 0
-fi
+log "Starting background port-forwards..."
+start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
+start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
+start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
+start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
+start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
 
-if ! run_forward "DeviceDataHub TimescaleDB" "timescaledb" "service/ai-flow-timescaledb" "5433:5432"; then
-    log "Grafana terminal opened, but no second terminal emulator was available."
-    start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
-    log "Grafana URL: http://localhost:3000"
-    if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
-        start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
-    fi
-    if ! run_forward "DeviceDataHub MQTT Monitor" "mqtt-ui" "service/ai-flow-monitor" "5000:5000"; then
-        start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
-    fi
-    if ! run_forward "DeviceDataHub Telemetry Monitor" "telemetry-ui" "service/ai-flow-monitor" "6080:6000"; then
-        start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
-    fi
-    log "MQTT messages UI: http://localhost:5000"
-    log "TimescaleDB records UI: http://localhost:6080"
-    log "Monitor pages auto-refresh every 30 seconds; choose a time range and use Load older records."
-    print_followup_commands
-    exit 0
-fi
-
-if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
-    log "Splunk terminal could not be opened; starting the port-forward in the background."
-    start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
-fi
-
-if ! run_forward "DeviceDataHub MQTT Monitor" "mqtt-ui" "service/ai-flow-monitor" "5000:5000"; then
-    start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
-fi
-if ! run_forward "DeviceDataHub Telemetry Monitor" "telemetry-ui" "service/ai-flow-monitor" "6080:6000"; then
-    start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
-fi
-
-log "Child terminals started"
 log "Grafana: http://localhost:3000"
-log "TimescaleDB: localhost:5433, database telemetry"
+log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
+log "TimescaleDB: localhost:5433"
+log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
+log "Splunk UI: http://localhost:4000"
+log "Splunk log: $RUNTIME_DIR/splunk.port-forward.log"
 log "MQTT messages UI: http://localhost:5000"
+log "MQTT log: $RUNTIME_DIR/mqtt-ui.port-forward.log"
 log "TimescaleDB records UI: http://localhost:6080"
-log "Keep both child terminals open while using Grafana or the database."
+log "TimescaleDB UI log: $RUNTIME_DIR/telemetry-ui.port-forward.log"
+log "Monitor pages auto-refresh every 30 seconds; choose a time range and use Load older records."
 print_followup_commands
