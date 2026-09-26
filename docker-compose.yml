@@ -95,13 +95,36 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+      loki:
+        condition: service_started
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./grafana/dashboard.json:/var/lib/grafana/dashboards/telemetry.json:ro
+      - ./grafana/logs-dashboard.json:/var/lib/grafana/dashboards/logs.json:ro
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/var/loki
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
     restart: unless-stopped
 
 volumes:
   timescaledb_data:
   grafana_data:
+  loki_data:

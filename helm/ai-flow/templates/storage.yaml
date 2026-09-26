@@ -61,3 +61,20 @@ spec:
   storageClassName: {{ . | quote }}
   {{- end }}
 {{- end }}
+{{- if .Values.loki.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-loki
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.loki.storage }}
+  {{- with .Values.loki.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

@@ -962,7 +962,7 @@
     {
       "id": 51,
       "type": "table",
-      "title": "Raw Telemetry — All 41 Fields",
+      "title": "Raw Telemetry \u2014 All 41 Fields",
       "description": "Complete telemetry records. Client-dependent placeholder zeros are represented as N/A.",
       "gridPos": {
         "h": 18,
@@ -1028,6 +1028,56 @@
         "showHeader": true,
         "cellHeight": "sm"
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "id": 53,
+      "panels": [],
+      "title": "Application Logs (Loki)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "id": 54,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{namespace=~\"devicedatahub|default\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Real-time Pod Application Logs (All Components: Consumer, Inference, TimescaleDB, Mosquitto, Simulator)",
+      "type": "logs"
     }
   ],
   "refresh": "30s",
@@ -1156,7 +1206,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Wi-Fi Radio Health & NOC Operations — TimescaleDB",
+  "title": "Wi-Fi Radio Health & NOC Operations \u2014 TimescaleDB",
   "uid": "wifi-radio-health-tsdb",
   "version": 1
 }

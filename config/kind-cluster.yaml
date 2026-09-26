@@ -1,0 +1,18 @@
+# Kind cluster configuration for DeviceDataHub.
+#
+# extraPortMappings bind NodePorts on the kind node to fixed host ports so
+# services are reachable directly from the host without kubectl port-forward:
+#
+#   Grafana     → http://localhost:3000   (NodePort 30300)
+#   TimescaleDB → localhost:5433          (NodePort 30543)
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30300   # Grafana NodePort
+        hostPort: 3000
+        protocol: TCP
+      - containerPort: 30543   # TimescaleDB NodePort
+        hostPort: 5433
+        protocol: TCP

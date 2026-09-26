@@ -6,7 +6,7 @@ image:
 
 mqtt:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   topic: weh-device/network
   clientId: telemetry-consumer
   username: ""
@@ -25,7 +25,7 @@ simulator:
 
 alerts:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   baseTopic: wifi/alerts
   username: ""
   password: ""
@@ -42,6 +42,10 @@ timescaledb:
   image: timescale/timescaledb:latest-pg16
   storage: 10Gi
   storageClassName: ""
+  service:
+    type: NodePort
+    port: 5432
+    nodePort: 30543
 
 grafana:
   enabled: true
@@ -54,6 +58,33 @@ grafana:
     type: NodePort
     port: 3000
     nodePort: 30300
+
+loki:
+  enabled: true
+  image: grafana/loki:latest
+  storage: 5Gi
+  storageClassName: ""
+  service:
+    type: ClusterIP
+    port: 3100
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+promtail:
+  enabled: true
+  image: grafana/promtail:latest
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 training:
   enabled: true

@@ -56,6 +56,10 @@ spec:
               mountPath: /etc/grafana/provisioning/datasources/timescaledb.yml
               subPath: timescaledb.yml
               readOnly: true
+            - name: datasource
+              mountPath: /etc/grafana/provisioning/datasources/loki.yml
+              subPath: loki.yml
+              readOnly: true
             - name: dashboard-provider
               mountPath: /etc/grafana/provisioning/dashboards/dashboards.yml
               subPath: dashboards.yml
@@ -63,6 +67,10 @@ spec:
             - name: dashboard
               mountPath: /var/lib/grafana/dashboards/dashboard.json
               subPath: dashboard.json
+              readOnly: true
+            - name: dashboard
+              mountPath: /var/lib/grafana/dashboards/logs-dashboard.json
+              subPath: logs-dashboard.json
               readOnly: true
       volumes:
         - name: grafana-data
